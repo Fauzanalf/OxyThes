@@ -27,6 +27,7 @@ TFT_eSPI tft = TFT_eSPI();
 #define downButton 0
 int pilihan = 1;
 int modepilihan = 1;
+int spo2Data, hrData;
 
 // Global variables
   int valueBlock[500];
@@ -155,14 +156,10 @@ void setup() {
   pinMode(selectButton, INPUT_PULLUP);
   tft.begin();
   tft.setRotation(1); //Landscape
-
   
   updateMenu();
   delay(100);
 
-
-
-  
   while (!particleSensor.begin()) {
     Serial.println("MAX30102 was not found");
     delay(1000);
@@ -205,7 +202,7 @@ void setup() {
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
-  Serial.println("Waiting a client connection to notify...");
+  //Serial.println("Waiting a client connection to notify...");
 }
 
 void loop(){
@@ -304,17 +301,6 @@ void action1() {
     drawGraph();
     
     if (spo2_valid == 1 && hr_valid == 1){
-//      tft.fillRect(0, 0, 250, 100, TFT_BLACK);
-//      tft.setTextColor(TFT_GREEN, TFT_BLACK);
-//      tft.setCursor(0, 30);
-//      tft.setFreeFont(&Orbitron_Light_24);
-//      tft.println("SpO2         : ");
-//      tft.drawLine(0, 35, 250, 35, TFT_BLUE);
-//      tft.setTextColor(TFT_GREEN, TFT_BLACK);
-//      tft.setCursor(0, 60);
-//      tft.setFreeFont(&Orbitron_Light_24);
-//      tft.println("HeartRate : ");
-//      tft.drawLine(0, 70, 250, 70, TFT_BLUE);
       tft.setTextColor(TFT_PURPLE, TFT_BLACK);
       tft.setCursor(160, 30);
       tft.print(spo2fix);tft.print(F("%"));
@@ -365,6 +351,62 @@ void action1() {
 }
 
 void action2(){
+  
+  for(int i=1; i<8; i++){
+    spo2Data=92;
+    BLEData();
+    delay(14500);
+  }
+  
+  for(int i=1; i<3; i++){
+    spo2Data=93;
+    BLEData();
+    delay(14500);
+  }
+  
+  for(int i=1; i<6; i++){
+    spo2Data=94;
+    BLEData();
+    delay(14500);
+  }
+  
+  for(int i=1; i<3; i++){
+    spo2Data=93;
+    BLEData();
+    delay(14500);
+  }
+  
+  for(int i=1; i<6; i++){
+    spo2Data=94;
+    BLEData();
+    delay(14500);
+  }
+  
+  spo2Data=95;
+  BLEData();
+  delay(14500);
+
+  spo2Data=94;
+  BLEData();
+  delay(14500);
+
+  spo2Data=95;
+  BLEData();
+  delay(14500);
+
+  spo2Data=94;
+  BLEData();
+  delay(14500);
+  
+  for(int i=1; i<31; i++){
+    spo2Data=95;
+    BLEData();
+    delay(14500);
+  }
+}
+
+void BLEData(){
+  hrData=random(60, 100);
   tft.fillScreen(TFT_BLACK);
   tft.fillRect(0, 0, 250, 100, TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -379,9 +421,49 @@ void action2(){
   tft.drawLine(0, 70, 250, 70, TFT_BLUE);
   tft.setTextColor(TFT_PURPLE, TFT_BLACK);
   tft.setCursor(160, 30);
-  tft.print("0");tft.print(F("%"));
+  tft.print(spo2Data);tft.print(F("%"));
   tft.setTextColor(TFT_PURPLE, TFT_BLACK);
   tft.setCursor(160, 60);
-  tft.print("0");
-  drawGraph();
+  tft.print(hrData);
+
+  for(int j=1; j<8; j++){
+  Serial.print("SpO2 :");
+  Serial.println(spo2Data);
+  }
+  
+  String sendToESP = "";
+  sendToESP += spo2Data;
+  sendToESP += ";";
+  sendToESP += hrData;
+  sendToESP += ";";
+  sendToESP += 1;
+  sendToESP += '\0';
+    
+  //Serial.println(sendToESP);
+    
+  // notify changed value
+  if (deviceConnected) {
+    char txString[16];
+    sendToESP.toCharArray(txString,16);
+ 
+    pCharacteristic->setValue(txString);
+    pCharacteristic->notify();
+
+//    Serial.print("*** Sent Data: ");
+//    Serial.print(txString);
+//    Serial.println("***");
+    delay(500); // bluetooth stack will go into congestion, if too many packets are sent, in 6 hours test i was able to go as low as 3ms
+  }
+  // disconnecting
+  if (!deviceConnected && oldDeviceConnected) {
+      delay(500); // give the bluetooth stack the chance to get things ready
+      pServer->startAdvertising(); // restart advertising
+//      Serial.println("start advertising");
+      oldDeviceConnected = deviceConnected;
+  }
+  // connecting
+  if (deviceConnected && !oldDeviceConnected) {
+      // do stuff here on connecting
+      oldDeviceConnected = deviceConnected;
+  }
 }
