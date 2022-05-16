@@ -36,8 +36,6 @@ int DataO2x,DataO2xx,DataO2xxx, DataLPMx,DataLPMxx;
 int DataO2Fixx;
 float DataLPMFixx;
 
-//int randOxy,randHR;
-
 // The remote service we wish to connect to.
 static BLEUUID serviceUUID("a18f3592-ec32-11eb-9a03-0242ac130003");
 // The characteristic of the remote service we are interested in.
@@ -205,11 +203,22 @@ void displayTFT() {
 //  tft.print(" HR       : "); tft.print(randHR); tft.println("BPM");
 
   tft.setCursor(5, 180);
-  tft.setTextColor(TFT_BLUE);
+  tft.setTextColor(TFT_YELLOW);
   tft.setTextFont(4);
-  tft.print("Pressure : "); tft.print("1"); tft.println("bar");
-  tft.print(" Flow          : "); tft.print(DataLPMFixx);tft.println("LPM");
+  tft.print(" Flow          : "); tft.print(DataLPMFixx,2);tft.println("LPM");
 
+  String DataSerial = "";
+  DataSerial += DataReceive1;
+  DataSerial += ";";
+  DataSerial += DataO2Fixx;
+  DataSerial += ";";
+  DataSerial += DataLPMFixx;
+  DataSerial += ";";
+  DataSerial += DataReceive2;
+  DataSerial += ";";
+  DataSerial += 1;
+  DataSerial += '\0';
+  Serial.println(DataSerial);
 }
 
 void ocs3f() {
@@ -334,117 +343,48 @@ void ocs3f() {
         DataLPMFix += DataLPMxx;
 
         DataO2Fixx=DataO2Fix.toInt();
-        DataLPMFixx=DataLPMFix.toFloat();
+        float x;
+        x = DataLPMFix.toFloat();
+        DataLPMFixx = (0.0141*x*x)+(0.7803*x)+0.035;
         
-        Serial.print(DataO2Fix+";"+DataLPMFix+";"+"1"+";"+'\n');
+        //Serial.print(DataO2Fix+";"+DataLPMFix+";"+"1"+";"+'\n');
       }
     }
   }
 }
 
 void control(){
-  if(DataReceive1 == 0){
+  if(DataReceive1 == NULL || DataReceive1 == 0){
     decreaseLPM();
+    //waitLoop();
   }
   
-  else if(DataReceive1 > 0 && DataReceive1 < 93){
+  else if(DataReceive1 > 0 && DataReceive1 < 94){
     increaseLPM();
     waitLoop();
+//    if(DataReceive1 >= 94 && DataLPMFixx < 4.00){
+//      waitLoop();
+//    }
+//    else if(DataReceive1 >= 94 && DataLPMFixx >= 4.00){
+//      decreaseLPM();
+//    }
   }
 
   else{
     decreaseLPM();
     waitLoop();
+//    if(DataReceive1 < 94){
+//      increaseLPM();
+//    }
   }
 }
 
-//void control() {
-//  if (DataReceive1 < 88){
-//    while(DataLPMFixx<=2.00){
-//      myStepper.step(200);
-//      ocs3f();
-//      displayTFT();
-//      delay(50);
-//    }
-//    delay(10000);
-//    bluetooth();
-//    ocs3f();
-//    displayTFT();
-//    
-//    if(DataReceive1<93){
-//      ocs3f();
-//      while(DataLPMFixx<=4.00){
-//        myStepper.step(800);
-//        ocs3f();
-//        displayTFT();
-//        delay(50);
-//      }
-//      delay(10000);
-//      bluetooth();
-//      ocs3f();
-//      displayTFT();
-//    }
-//    
-//    else if(DataReceive1>=93){
-//      while(DataLPMFixx>=2.00){
-//        myStepper.step(-200);
-//        ocs3f();
-//        displayTFT();
-//        delay(500);
-//      }
-//      delay(10000);
-//      bluetooth();
-//      ocs3f();
-//      displayTFT();
-//
-//      if(DataReceive1>=93){
-//        while(DataLPMFixx>=1){
-//          myStepper.step(-200);
-//          ocs3f();
-//          displayTFT();
-//          delay(500);
-//        }
-//        delay(10000);
-//        bluetooth();
-//        ocs3f();
-//        displayTFT();
-//      }
-//      else{
-//        while(DataLPMFixx>=2){
-//          myStepper.step(-200);
-//          ocs3f();
-//          displayTFT();
-//          delay(500);
-//        }
-//        delay(10000);
-//        bluetooth();
-//        ocs3f();
-//        displayTFT();
-//      }
-//    }
-//    else{
-//      
-//    }
-//  }
-//  
-//  else{
-//    while(DataLPMFixx>=1){
-//      myStepper.step(-200);
-//      ocs3f();
-//      displayTFT();
-//      delay(500);
-//    }
-//  }
-//}
 
 void increaseLPM(){
   float DataLPM;
   DataLPM = DataLPMFixx + 2;
-  while(DataLPMFixx <= DataLPM && DataLPMFixx < 6.00){
+  while(DataLPMFixx <= DataLPM && DataLPMFixx < 4.00){
     myStepper.step(200);
-    ocs3f();
-    displayTFT();
-    delay(500);
     ocs3f();
     displayTFT();
     delay(500);
@@ -459,11 +399,8 @@ void increaseLPM(){
 void decreaseLPM(){
   float DataLPM;
   DataLPM = DataLPMFixx - 0.5;
-  while(DataLPMFixx >= DataLPM && DataLPMFixx > 1.20){
+  while(DataLPMFixx >= DataLPM && DataLPMFixx > 0.2){
     myStepper.step(-100);
-    ocs3f();
-    displayTFT();
-    delay(500);
     ocs3f();
     displayTFT();
     delay(500);
