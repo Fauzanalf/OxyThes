@@ -426,10 +426,11 @@ void BLEData(){
   tft.setCursor(160, 60);
   tft.print(hrData);
 
-  for(int j=1; j<8; j++){
-  Serial.print("SpO2 :");
+//  for(int j=1; j<8; j++){
+//  //Serial.print("SpO2 :");
+//  Serial.println(spo2Data);
+//  }
   Serial.println(spo2Data);
-  }
   
   String sendToESP = "";
   sendToESP += spo2Data;
