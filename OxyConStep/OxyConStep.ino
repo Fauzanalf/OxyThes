@@ -9,6 +9,8 @@
 #define TFT_GREY 0x5AEB // New colour
 TFT_eSPI tft = TFT_eSPI();  // Invoke library
 
+unsigned long myTime;
+
 const int stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
 
 // ULN2003 Motor Driver Pins
@@ -16,12 +18,6 @@ const int stepsPerRevolution = 2048;  // change this to fit the number of steps 
 #define IN2 25
 #define IN3 26
 #define IN4 27
-
-//// ULN2003 Motor Driver Pins
-//#define IN1 27
-//#define IN2 26
-//#define IN3 25
-//#define IN4 33
 
 // initialize the stepper library
 Stepper myStepper(stepsPerRevolution, IN1, IN3, IN2, IN4);
@@ -158,9 +154,9 @@ void loop() {
   ocs3f();
   bluetooth();
   displayTFT();
-  control();
+  //control();
   
-  delay(1000);
+  delay(2000);
 }
 
 void bluetooth() {
@@ -177,7 +173,7 @@ void bluetooth() {
 }
 
 void displayTFT() {
-  tft.fillScreen(TFT_GREY);
+  tft.fillScreen(TFT_BLACK);
   
 //  int randOxy = random(90, 95);
 //  int randHR = random(75, 82);
@@ -232,7 +228,7 @@ void ocs3f() {
   if (Serial2.available()) {
 
     // wait a bit for the entire message to arrive
-    delay(100);
+    delay(200);
 
     // read all the available characters
     while (Serial2.available() > 0) {
@@ -345,7 +341,8 @@ void ocs3f() {
         DataO2Fixx=DataO2Fix.toInt();
         float x;
         x = DataLPMFix.toFloat();
-        DataLPMFixx = (0.0141*x*x)+(0.7803*x)+0.035;
+        //DataLPMFixx = x;
+        DataLPMFixx = (-0.0021*x*x)+(0.8605*x)+0.0111;
         
         //Serial.print(DataO2Fix+";"+DataLPMFix+";"+"1"+";"+'\n');
       }
@@ -356,26 +353,29 @@ void ocs3f() {
 void control(){
   if(DataReceive1 == NULL || DataReceive1 == 0){
     decreaseLPM();
-    //waitLoop();
   }
   
   else if(DataReceive1 > 0 && DataReceive1 < 94){
     increaseLPM();
-    waitLoop();
-//    if(DataReceive1 >= 94 && DataLPMFixx < 4.00){
-//      waitLoop();
-//    }
-//    else if(DataReceive1 >= 94 && DataLPMFixx >= 4.00){
-//      decreaseLPM();
-//    }
   }
 
-  else{
+  else if(DataReceive1 >= 94 && DataLPMFixx > 3.6){
     decreaseLPM();
     waitLoop();
-//    if(DataReceive1 < 94){
-//      increaseLPM();
-//    }
+  }
+
+  else if(DataReceive1 >= 94 && DataLPMFixx <= 3.6){
+    waitLoop();
+    if(DataReceive1 >= 94){
+      decreaseLPM();
+    }
+    else{
+      myStepper.step(650);
+    }
+  }
+  
+  else{
+    waitLoop();
   }
 }
 
@@ -383,15 +383,17 @@ void control(){
 void increaseLPM(){
   float DataLPM;
   DataLPM = DataLPMFixx + 2;
-  while(DataLPMFixx <= DataLPM && DataLPMFixx < 4.00){
+  while(DataLPMFixx <= DataLPM && DataLPMFixx < 3.90){
+    if(DataLPMFixx >= 3.90){
+      break;
+    }
     myStepper.step(200);
+    delay(900);
     ocs3f();
     displayTFT();
-    delay(500);
+    delay(900);
     ocs3f();
-    displayTFT();
-    delay(500);
-    ocs3f();
+    bluetooth();
     displayTFT();
   }
 }
@@ -400,23 +402,31 @@ void decreaseLPM(){
   float DataLPM;
   DataLPM = DataLPMFixx - 0.5;
   while(DataLPMFixx >= DataLPM && DataLPMFixx > 0.2){
+    if(DataReceive1 < 94){
+      break;
+    }
     myStepper.step(-100);
+    delay(900);
     ocs3f();
     displayTFT();
-    delay(500);
+    delay(900);
     ocs3f();
-    displayTFT();
-    delay(500);
-    ocs3f();
+    bluetooth();
     displayTFT();
   }
 }
 
 void waitLoop(){
-  for(int i;i<10;i++){
-    delay(1500);
-    bluetooth();
+  for(int i=0;i<15;i++){
+    if(DataReceive1 < 94){
+      i=14;
+    }
+    delay(900);
     ocs3f();
+    displayTFT();
+    delay(900);
+    ocs3f();
+    bluetooth();
     displayTFT();
   }
 }
